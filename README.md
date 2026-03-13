@@ -16,7 +16,7 @@ Spin up a fully working MCP environment on your machine in minutes — a Kind cl
 │  └───────────────────────────────────────────────┘  │
 │                                                     │
 │  ┌───────────────────────────────────────────────┐  │
-│  │  default                                      │  │
+│  │  kubernetes-mcp-server                        │  │
 │  │  ├─ MCPServer CR (kubernetes-mcp-server)      │  │
 │  │  ├─ ServiceAccount (mcp-editor)               │  │
 │  │  └─ ConfigMap (server config)                 │  │
@@ -57,7 +57,7 @@ Or run them all at once:
 |--------|-------------|
 | `00-installer-kind.sh` | Creates a Kind cluster (uses Podman on Linux), waits for core services, and patches CoreDNS to use `8.8.8.8` for external resolution. |
 | `01-mcp-lifecycle-operator.sh` | Installs the MCP Lifecycle Operator from the upstream distribution manifest and waits for the controller deployment to become ready. |
-| `02-kubernetes-mcp-server.sh` | Creates a `ServiceAccount` with `edit` permissions, a server configuration `ConfigMap`, and an `MCPServer` custom resource that the operator reconciles into a running MCP server pod. |
+| `02-kubernetes-mcp-server.sh` | Creates the `kubernetes-mcp-server` namespace, a `ServiceAccount` with `edit` permissions, a server configuration `ConfigMap`, and an `MCPServer` custom resource that the operator reconciles into a running MCP server pod. |
 
 ## ✅ Verifying the Setup
 
@@ -67,12 +67,12 @@ After running all scripts, confirm everything is healthy:
 kubectl get pods -A
 ```
 
-You should see pods running in `kube-system`, `mcp-lifecycle-operator-system`, and `default` (the MCP server).
+You should see pods running in `kube-system`, `mcp-lifecycle-operator-system`, and `kubernetes-mcp-server`.
 
 Check the MCP server resource:
 
 ```bash
-kubectl get mcpservers -n default
+kubectl get mcpservers -n kubernetes-mcp-server
 ```
 
 ## 🔌 Port Forwarding
@@ -80,7 +80,7 @@ kubectl get mcpservers -n default
 To connect to the MCP server from your local machine (e.g. from a local MCP client or Claude Desktop):
 
 ```bash
-kubectl port-forward svc/kubernetes-mcp-server 8080:8080
+kubectl port-forward -n kubernetes-mcp-server svc/kubernetes-mcp-server 8080:8080
 ```
 
 The server will be available at `http://localhost:8080/mcp`.

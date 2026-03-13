@@ -21,14 +21,20 @@ function header_text {
 
 header_text "Installing Kubernetes MCP Server"
 
-kubectl apply -n default -f - << EOF
+kubectl apply -n kubernetes-mcp-server -f - << EOF
+---
+# Namespace for the kubernetes-mcp-server
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubernetes-mcp-server
 ---
 # ServiceAccount for the kubernetes-mcp-server with write access
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: mcp-editor
-  namespace: default
+  namespace: kubernetes-mcp-server
 ---
 # ClusterRoleBinding to grant read/write access across the cluster
 # Uses the built-in 'edit' ClusterRole which provides read/write access
@@ -44,7 +50,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: mcp-editor
-    namespace: default
+    namespace: kubernetes-mcp-server
 ---
 # ClusterRole to manage MCPServer custom resources
 # The built-in 'edit' ClusterRole does not cover CRDs
@@ -68,14 +74,14 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: mcp-editor
-    namespace: default
+    namespace: kubernetes-mcp-server
 ---
 # ConfigMap containing the kubernetes-mcp-server configuration
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: kubernetes-mcp-server-config
-  namespace: default
+  namespace: kubernetes-mcp-server
 data:
   config.toml: |
     # Kubernetes MCP Server Configuration
@@ -98,7 +104,7 @@ apiVersion: mcp.x-k8s.io/v1alpha1
 kind: MCPServer
 metadata:
   name: kubernetes-mcp-server
-  namespace: default
+  namespace: kubernetes-mcp-server
 spec:
   image: quay.io/containers/kubernetes_mcp_server:latest
   port: 8080
