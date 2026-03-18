@@ -2,7 +2,7 @@
 
 A local Kubernetes playground for [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) servers, powered by [Kind](https://kind.sigs.k8s.io/) and the [MCP Lifecycle Operator](https://github.com/kubernetes-sigs/mcp-lifecycle-operator).
 
-Spin up a fully working MCP environment on your machine in minutes — a Kind cluster, the operator that manages MCP server lifecycles, and a ready-to-use [Kubernetes MCP Server](https://github.com/containers/kubernetes-mcp-server) instance.
+Spin up a fully working MCP environment on your machine in minutes — a Kind cluster, the operator that manages MCP server lifecycles, a ready-to-use [Kubernetes MCP Server](https://github.com/containers/kubernetes-mcp-server) instance, and the [MCP Launcher](https://github.com/matzew/mcp-launcher) web UI for browsing and deploying MCP servers from a catalog.
 
 ## 🏗️ Architecture
 
@@ -21,6 +21,16 @@ Spin up a fully working MCP environment on your machine in minutes — a Kind cl
 │  │  ├─ ServiceAccount (mcp-editor)               │  │
 │  │  └─ ConfigMap (server config)                 │  │
 │  └───────────────────────────────────────────────┘  │
+│                                                     │
+│  ┌───────────────────────────────────────────────┐  │
+│  │  mcp-system                                   │  │
+│  │  └─ MCP Launcher (web UI)                     │  │
+│  └───────────────────────────────────────────────┘  │
+│                                                     │
+│  ┌───────────────────────────────────────────────┐  │
+│  │  mcp-catalog                                  │  │
+│  │  └─ Catalog ConfigMaps (server entries)       │  │
+│  └───────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -32,32 +42,30 @@ Spin up a fully working MCP environment on your machine in minutes — a Kind cl
 
 ## 🚀 Getting Started
 
-Run the scripts in order:
+Run everything with a single command:
 
 ```bash
-# 1. Create a Kind cluster
-./00-installer-kind.sh
-
-# 2. Install the MCP Lifecycle Operator
-./01-mcp-lifecycle-operator.sh
-
-# 3. Deploy the Kubernetes MCP Server
-./02-kubernetes-mcp-server.sh
+./mcp-box.sh
 ```
 
-Or run them all at once:
+Or run individual steps from the `scripts/` directory:
 
 ```bash
-./00-installer-kind.sh && ./01-mcp-lifecycle-operator.sh && ./02-kubernetes-mcp-server.sh
+./scripts/00-installer-kind.sh          # 1. Create a Kind cluster
+./scripts/01-mcp-lifecycle-operator.sh  # 2. Install the MCP Lifecycle Operator
+./scripts/02-kubernetes-mcp-server.sh   # 3. Deploy the Kubernetes MCP Server
+./scripts/03-mcp-launcher.sh           # 4. Deploy the MCP Launcher (web UI + catalog)
 ```
 
 ## 🔍 What Each Script Does
 
 | Script | Description |
 |--------|-------------|
-| `00-installer-kind.sh` | Creates a Kind cluster (uses Podman on Linux), waits for core services, and patches CoreDNS to use `8.8.8.8` for external resolution. |
-| `01-mcp-lifecycle-operator.sh` | Installs the MCP Lifecycle Operator from the upstream distribution manifest and waits for the controller deployment to become ready. |
-| `02-kubernetes-mcp-server.sh` | Creates the `kubernetes-mcp-server` namespace, a `ServiceAccount` with `edit` permissions, a server configuration `ConfigMap`, and an `MCPServer` custom resource that the operator reconciles into a running MCP server pod. |
+| `mcp-box.sh` | Wrapper that runs all scripts below in order. |
+| `scripts/00-installer-kind.sh` | Creates a Kind cluster (uses Podman on Linux), waits for core services, and patches CoreDNS to use `8.8.8.8` for external resolution. |
+| `scripts/01-mcp-lifecycle-operator.sh` | Installs the MCP Lifecycle Operator from the upstream distribution manifest and waits for the controller deployment to become ready. |
+| `scripts/02-kubernetes-mcp-server.sh` | Creates the `kubernetes-mcp-server` namespace, a `ServiceAccount` with `edit` permissions, a server configuration `ConfigMap`, and an `MCPServer` custom resource that the operator reconciles into a running MCP server pod. |
+| `scripts/03-mcp-launcher.sh` | Installs the [MCP Launcher](https://github.com/matzew/mcp-launcher) web UI from its distribution manifest. Creates the `mcp-system` and `mcp-catalog` namespaces with RBAC, a Deployment/Service, and sample catalog entries. |
 
 ## ✅ Verifying the Setup
 
@@ -67,7 +75,7 @@ After running all scripts, confirm everything is healthy:
 kubectl get pods -A
 ```
 
-You should see pods running in `kube-system`, `mcp-lifecycle-operator-system`, and `kubernetes-mcp-server`.
+You should see pods running in `kube-system`, `mcp-lifecycle-operator-system`, `kubernetes-mcp-server`, and `mcp-system`.
 
 Check the MCP server resource:
 
@@ -84,6 +92,14 @@ kubectl port-forward -n kubernetes-mcp-server svc/kubernetes-mcp-server 8080:808
 ```
 
 The server will be available at `http://localhost:8080/mcp`.
+
+To access the MCP Launcher web UI:
+
+```bash
+kubectl port-forward -n mcp-system svc/mcp-launcher 9090:8080
+```
+
+Then open http://localhost:9090 in your browser.
 
 ## 🔎 MCP Inspector
 
