@@ -106,13 +106,23 @@ metadata:
   name: kubernetes-mcp-server
   namespace: kubernetes-mcp-server
 spec:
-  image: quay.io/containers/kubernetes_mcp_server:latest
-  port: 8080
-  serviceAccountName: mcp-editor  # Use the ServiceAccount with read/write RBAC permissions
-  configMapRef:
-    name: kubernetes-mcp-server-config
-  args:
-    - --config
-    - /etc/mcp-config/config.toml
+  source:
+    type: ContainerImage
+    containerImage:
+      ref: quay.io/containers/kubernetes_mcp_server:latest
+  config:
+    port: 8080
+    arguments:
+      - --config
+      - /etc/mcp-config/config.toml
+    storage:
+      - path: /etc/mcp-config
+        source:
+          type: ConfigMap
+          configMap:
+            name: kubernetes-mcp-server-config
+  runtime:
+    security:
+      serviceAccountName: mcp-editor  # Use the ServiceAccount with read/write RBAC permissions
 ---
 EOF
