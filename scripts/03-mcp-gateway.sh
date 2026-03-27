@@ -35,7 +35,8 @@ helm upgrade --install mcp-gateway oci://ghcr.io/kuadrant/charts/mcp-gateway \
     --set gateway.nodePort.mcpPort=30080 \
     --set envoyFilter.name=mcp-gateway \
     --set mcpGatewayExtension.gatewayRef.name=mcp-gateway \
-    --set mcpGatewayExtension.gatewayRef.namespace=gateway-system
+    --set mcpGatewayExtension.gatewayRef.namespace=gateway-system \
+    --set broker.pollInterval=10
 
 header_text "Waiting for MCP Gateway to become ready"
 for deploy in mcp-gateway mcp-gateway-controller; do
