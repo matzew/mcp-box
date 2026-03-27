@@ -125,4 +125,34 @@ spec:
     security:
       serviceAccountName: mcp-editor  # Use the ServiceAccount with read/write RBAC permissions
 ---
+# HTTPRoute for mcp-gateway integration
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: kubernetes-mcp-server
+  namespace: kubernetes-mcp-server
+spec:
+  hostnames:
+  - kubernetes-mcp-server.mcp.local
+  parentRefs:
+  - name: mcp-gateway
+    namespace: gateway-system
+  rules:
+  - backendRefs:
+    - name: kubernetes-mcp-server
+      port: 8080
+---
+# MCPServerRegistration for mcp-gateway integration
+apiVersion: mcp.kagenti.com/v1alpha1
+kind: MCPServerRegistration
+metadata:
+  name: kubernetes-mcp-server
+  namespace: kubernetes-mcp-server
+spec:
+  toolPrefix: kube_
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: kubernetes-mcp-server
+---
 EOF
