@@ -1,46 +1,51 @@
-# 📦 MCP Box
+# MCP Box
 
-A local Kubernetes playground for [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) servers, powered by [Kind](https://kind.sigs.k8s.io/) and the [MCP Lifecycle Operator](https://github.com/kubernetes-sigs/mcp-lifecycle-operator).
+A local Kubernetes playground for [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) servers, powered by [Kind](https://kind.sigs.k8s.io/), the [MCP Lifecycle Operator](https://github.com/kubernetes-sigs/mcp-lifecycle-operator), and [MCP Gateway](https://github.com/Kuadrant/mcp-gateway).
 
-Spin up a fully working MCP environment on your machine in minutes — a Kind cluster, the operator that manages MCP server lifecycles, a ready-to-use [Kubernetes MCP Server](https://github.com/containers/kubernetes-mcp-server) instance, and the [MCP Launcher](https://github.com/matzew/mcp-launcher) web UI for browsing and deploying MCP servers from a catalog.
+Spin up a fully working MCP environment on your machine — a Kind cluster, Gateway API with Istio, the MCP Gateway for federated tool access, and the [MCP Launcher](https://github.com/matzew/mcp-launcher) web UI for browsing and deploying MCP servers from a catalog.
 
-## 🏗️ Architecture
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Kind Cluster                      │
-│                                                     │
-│  ┌───────────────────────────────────────────────┐  │
-│  │  mcp-lifecycle-operator-system                │  │
-│  │  └─ MCP Lifecycle Operator (controller)       │  │
-│  └───────────────────────────────────────────────┘  │
-│                                                     │
-│  ┌───────────────────────────────────────────────┐  │
-│  │  kubernetes-mcp-server                        │  │
-│  │  ├─ MCPServer CR (kubernetes-mcp-server)      │  │
-│  │  ├─ ServiceAccount (mcp-editor)               │  │
-│  │  └─ ConfigMap (server config)                 │  │
-│  └───────────────────────────────────────────────┘  │
-│                                                     │
-│  ┌───────────────────────────────────────────────┐  │
-│  │  mcp-system                                   │  │
-│  │  └─ MCP Launcher (web UI)                     │  │
-│  └───────────────────────────────────────────────┘  │
-│                                                     │
-│  ┌───────────────────────────────────────────────┐  │
-│  │  mcp-catalog                                  │  │
-│  │  └─ Catalog ConfigMaps (server entries)       │  │
-│  └───────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────┘
+                        localhost:7001 (NodePort)
+                              |
+┌─────────────────────────────┼───────────────────────────────┐
+│                   Kind Cluster                              │
+│                             |                               │
+│  ┌──────────────────────────┼────────────────────────────┐  │
+│  │  gateway-system          |                            │  │
+│  │  ├─ Istio (Gateway API provider)                      │  │
+│  │  └─ mcp-gateway (Envoy + ext_proc)                    │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  mcp-system                                           │  │
+│  │  ├─ MCP Gateway broker + router                       │  │
+│  │  ├─ MCP Gateway controller                            │  │
+│  │  └─ MCP Launcher (web UI)                             │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  mcp-catalog                                          │  │
+│  │  └─ Catalog ConfigMaps (server entries)               │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  kubernetes-mcp-server (optional, script 05)          │  │
+│  │  ├─ MCPServer CR                                      │  │
+│  │  ├─ HTTPRoute + MCPServerRegistration (kube_ prefix)  │  │
+│  │  └─ ServiceAccount (mcp-editor)                       │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## 📋 Prerequisites
+## Prerequisites
 
 - [Kind](https://kind.sigs.k8s.io/) installed
 - [kubectl](https://kubernetes.io/docs/tasks/tools/) installed
 - A container runtime — [Podman](https://podman.io/) (Linux) or Docker (macOS)
 
-## 🚀 Getting Started
+## Getting Started
 
 Run everything with a single command:
 
@@ -48,26 +53,43 @@ Run everything with a single command:
 ./mcp-box.sh
 ```
 
-Or run individual steps from the `scripts/` directory:
+This installs the base platform (Kind + operator + Istio + MCP Gateway + Launcher). To also deploy the Kubernetes MCP Server with gateway integration:
 
 ```bash
-./scripts/00-installer-kind.sh          # 1. Create a Kind cluster
-./scripts/01-mcp-lifecycle-operator.sh  # 2. Install the MCP Lifecycle Operator
-./scripts/02-kubernetes-mcp-server.sh   # 3. Deploy the Kubernetes MCP Server
-./scripts/03-mcp-launcher.sh           # 4. Deploy the MCP Launcher (web UI + catalog)
+./scripts/05-kubernetes-mcp-server.sh
 ```
 
-## 🔍 What Each Script Does
+Or use `install-base.sh` to set up just the gateway infrastructure without the Launcher:
+
+```bash
+./install-base.sh
+```
+
+### Individual scripts
+
+```bash
+./scripts/00-installer-kind.sh          # 1. Create Kind cluster (NodePort on 7001)
+./scripts/01-mcp-lifecycle-operator.sh  # 2. Install MCP Lifecycle Operator
+./scripts/02-gateway-api-istio.sh       # 3. Install Istio as Gateway API provider
+./scripts/03-mcp-gateway.sh            # 4. Install MCP Gateway
+./scripts/04-mcp-launcher.sh           # 5. Deploy MCP Launcher (web UI + catalog)
+./scripts/05-kubernetes-mcp-server.sh  # 6. Deploy Kubernetes MCP Server (optional)
+```
+
+## What Each Script Does
 
 | Script | Description |
 |--------|-------------|
-| `mcp-box.sh` | Wrapper that runs all scripts below in order. |
-| `scripts/00-installer-kind.sh` | Creates a Kind cluster (uses Podman on Linux), waits for core services, and patches CoreDNS to use `8.8.8.8` for external resolution. |
-| `scripts/01-mcp-lifecycle-operator.sh` | Installs the MCP Lifecycle Operator from the upstream distribution manifest and waits for the controller deployment to become ready. |
-| `scripts/02-kubernetes-mcp-server.sh` | Creates the `kubernetes-mcp-server` namespace, a `ServiceAccount` with `edit` permissions, a server configuration `ConfigMap`, and an `MCPServer` custom resource that the operator reconciles into a running MCP server pod. |
-| `scripts/03-mcp-launcher.sh` | Installs the [MCP Launcher](https://github.com/matzew/mcp-launcher) web UI from its distribution manifest. Creates the `mcp-system` and `mcp-catalog` namespaces with RBAC, a Deployment/Service, and sample catalog entries. |
+| `mcp-box.sh` | Wrapper that runs scripts 00-04 in order. |
+| `install-base.sh` | Runs scripts 00-03 (gateway infrastructure only, no Launcher). |
+| `00-installer-kind.sh` | Creates a Kind cluster (uses Podman on Linux) with a NodePort mapping (host 7001 -> container 30080), patches CoreDNS for external resolution. |
+| `01-mcp-lifecycle-operator.sh` | Installs the MCP Lifecycle Operator and waits for the controller to become ready. |
+| `02-gateway-api-istio.sh` | Installs Istio as a Gateway API provider (gateway only, no service mesh). |
+| `03-mcp-gateway.sh` | Installs MCP Gateway (broker, router, controller) with a NodePort service on 30080. |
+| `04-mcp-launcher.sh` | Installs the [MCP Launcher](https://github.com/matzew/mcp-launcher) web UI with sample catalog entries. The Launcher auto-creates HTTPRoute and MCPServerRegistration for each deployed MCPServer. |
+| `05-kubernetes-mcp-server.sh` | Deploys the [Kubernetes MCP Server](https://github.com/containers/kubernetes-mcp-server) with HTTPRoute and MCPServerRegistration (`kube_` prefix). Not run by `mcp-box.sh` — run manually. |
 
-## ✅ Verifying the Setup
+## Verifying the Setup
 
 After running all scripts, confirm everything is healthy:
 
@@ -75,25 +97,29 @@ After running all scripts, confirm everything is healthy:
 kubectl get pods -A
 ```
 
-You should see pods running in `kube-system`, `mcp-lifecycle-operator-system`, `kubernetes-mcp-server`, and `mcp-system`.
-
-Check the MCP server resource:
+Check registered MCP servers on the gateway:
 
 ```bash
-kubectl get mcpservers -n kubernetes-mcp-server
+kubectl get mcpserverregistrations.mcp.kagenti.com -A
 ```
 
-## 🔌 Port Forwarding
+## Accessing the Gateway
 
-To connect to the MCP server from your local machine (e.g. from a local MCP client or Claude Desktop):
+The gateway is exposed via NodePort on `localhost:7001`:
 
 ```bash
-kubectl port-forward -n kubernetes-mcp-server svc/kubernetes-mcp-server 8080:8080
+# Connect MCP Inspector or any MCP client to:
+http://localhost:7001/mcp
 ```
 
-The server will be available at `http://localhost:8080/mcp`.
+Alternatively, port-forward:
 
-To access the MCP Launcher web UI:
+```bash
+kubectl port-forward -n gateway-system svc/mcp-gateway-istio 8001:8080
+# Gateway at http://localhost:8001/mcp
+```
+
+## Accessing the MCP Launcher
 
 ```bash
 kubectl port-forward -n mcp-system svc/mcp-launcher 9090:8080
@@ -101,17 +127,17 @@ kubectl port-forward -n mcp-system svc/mcp-launcher 9090:8080
 
 Then open http://localhost:9090 in your browser.
 
-## 🔎 MCP Inspector
+## MCP Inspector
 
-You can use the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) to test and debug the MCP server. First, port-forward the MCP server as shown above, then run the inspector locally:
+Test the gateway with the [MCP Inspector](https://github.com/modelcontextprotocol/inspector):
 
 ```bash
 podman run --rm --network host ghcr.io/modelcontextprotocol/inspector:latest
 ```
 
-Open http://localhost:6274 in your browser and connect to `http://localhost:8080/mcp`.
+Open http://localhost:6274 and connect to `http://localhost:7001/mcp`.
 
-## 🧹 Cleanup
+## Cleanup
 
 Delete the entire Kind cluster:
 
@@ -119,6 +145,6 @@ Delete the entire Kind cluster:
 kind delete cluster
 ```
 
-## 📄 License
+## License
 
 [Apache License 2.0](LICENSE)
