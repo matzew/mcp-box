@@ -19,12 +19,27 @@ function header_text {
   echo "$header$*$reset"
 }
 
-header_text "Starting Knative on kind!"
+header_text "Starting MCP Box on kind!"
 
 if [ $(uname) != "Darwin" ]; then
     export KIND_EXPERIMENTAL_PROVIDER=podman
 fi
-kind create cluster --image=${K8S_IMAGE}
+cat <<EOF | kind create cluster --image=${K8S_IMAGE} --config=-
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+  extraPortMappings:
+  - containerPort: 30080
+    hostPort: 7001
+    protocol: TCP
+EOF
 rm -f "$KIND_CONFIG"
 header_text "Waiting for core k8s services to initialize"
 kubectl cluster-info --context kind-kind
