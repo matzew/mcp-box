@@ -11,7 +11,7 @@ else
   reset=''
 fi
 
-MCP_GATEWAY_VERSION=${MCP_GATEWAY_VERSION:-0.5.1}
+MCP_GATEWAY_VERSION=${MCP_GATEWAY_VERSION:-0.6.0}
 MCP_GATEWAY_HOST=${MCP_GATEWAY_HOST:-mcp.127-0-0-1.sslip.io}
 
 function header_text {
@@ -26,14 +26,12 @@ helm upgrade --install mcp-gateway oci://ghcr.io/kuadrant/charts/mcp-gateway \
     --create-namespace \
     --namespace mcp-system \
     --version $MCP_GATEWAY_VERSION \
-    --set broker.create=true \
     --set gateway.create=true \
     --set gateway.name=mcp-gateway \
     --set gateway.namespace=gateway-system \
     --set gateway.publicHost=$MCP_GATEWAY_HOST \
     --set gateway.nodePort.create=true \
     --set gateway.nodePort.mcpPort=30080 \
-    --set envoyFilter.name=mcp-gateway \
     --set mcpGatewayExtension.gatewayRef.name=mcp-gateway \
     --set mcpGatewayExtension.gatewayRef.namespace=gateway-system \
     --set broker.pollInterval=10

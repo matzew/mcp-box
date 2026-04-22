@@ -115,7 +115,7 @@ kubectl get pods -A
 Check registered MCP servers on the gateway:
 
 ```bash
-kubectl get mcpserverregistrations.mcp.kagenti.com -A
+kubectl get mcpserverregistrations.mcp.kuadrant.io -A
 ```
 
 ## 🌐 Accessing the Gateway
