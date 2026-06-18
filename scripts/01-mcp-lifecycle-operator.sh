@@ -15,13 +15,14 @@ else
   reset=''
 fi
 
-mlo_url=https://raw.githubusercontent.com/matzew/kubernetes-mcp-lifecycle-operator/refs/heads/distribution/dist/install.yaml
+MLO_VERSION=${MLO_VERSION:-0.2.0}
+mlo_url=https://github.com/kubernetes-sigs/mcp-lifecycle-operator/releases/download/v${MLO_VERSION}/install.yaml
 
 function header_text {
   echo "$header$*$reset"
 }
 
-header_text "Setting up MCP Lifecycle Operator"
+header_text "Setting up MCP Lifecycle Operator v${MLO_VERSION}"
 kubectl apply --filename $mlo_url
 
 header_text "Waiting for MCP Lifecycle Operator to become ready"
